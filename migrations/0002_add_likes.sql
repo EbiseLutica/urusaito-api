@@ -1,0 +1,2 @@
+-- いいね数
+ALTER TABLE gyagus ADD COLUMN likes INTEGER NOT NULL DEFAULT 0;

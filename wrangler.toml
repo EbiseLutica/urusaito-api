@@ -43,3 +43,9 @@ binding = "DB"
 database_name = "urusaito"
 database_id = "4638fb31-d635-416d-9e17-192751178f27"
 migrations_dir = "migrations"
+
+# いいね連打の抑制。IP あたり 60 秒で 10 回まで
+[[ratelimits]]
+name = "LIKE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 10, period = 60 }
