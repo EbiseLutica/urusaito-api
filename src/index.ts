@@ -33,7 +33,12 @@ const requireApiKey = bearerAuth<{ Bindings: Bindings }>({
  */
 app.get('/', async (c) => {
 	const { results } = await c.env.DB.prepare('SELECT id, text, summary, url FROM gyagus ORDER BY id DESC').all<GyaguRow>();
-	return c.json(results.map((g) => (g.summary == null ? g.text : [g.summary, g.text])));
+	return c.json(results.map((g) => ({
+		id: g.id,
+		text: g.text,
+		summary: g.summary,
+		url: g.url,
+	})));
 });
 
 /**
