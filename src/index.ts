@@ -43,7 +43,7 @@ app.get('/', async (c) => {
 
 /**
  * だじゃれを新規追加する。
- * ペイロード: `{ text: string; cw?: string | null; url: string }`。cw は summary として保存する。
+ * ペイロード: `{ text: string; summary?: string | null; url: string }`。
  */
 app.post('/', requireApiKey, async (c) => {
 	const body = await c.req.json<unknown>().catch(() => null);
@@ -51,19 +51,19 @@ app.post('/', requireApiKey, async (c) => {
 		return c.json({ error: 'Invalid JSON body' }, 400);
 	}
 
-	const { text, cw, url } = body as Record<string, unknown>;
+	const { text, summary, url } = body as Record<string, unknown>;
 	if (typeof text !== 'string' || text === '') {
 		return c.json({ error: 'text must be a non-empty string' }, 400);
 	}
-	if (cw != null && typeof cw !== 'string') {
-		return c.json({ error: 'cw must be a string or null' }, 400);
+	if (summary != null && typeof summary !== 'string') {
+		return c.json({ error: 'summary must be a string or null' }, 400);
 	}
 	if (typeof url !== 'string' || !URL.canParse(url)) {
 		return c.json({ error: 'url must be a valid URL' }, 400);
 	}
 
 	const row = await c.env.DB.prepare('INSERT INTO gyagus (text, summary, url) VALUES (?, ?, ?) RETURNING id, text, summary, url')
-		.bind(text, cw || null, url)
+		.bind(text, summary || null, url)
 		.first<GyaguRow>();
 	return c.json(row, 201);
 });
