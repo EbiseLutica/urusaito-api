@@ -29,11 +29,26 @@ const requireApiKey = bearerAuth<{ Bindings: Bindings }>({
 	verifyToken: async (token, c) => !!c.env.API_KEY && (await timingSafeEqual(token, c.env.API_KEY)),
 });
 
+/** `?order=` で指定できる並び順と ORDER BY 句の対応。いいね数が同じなら新しい順。 */
+const ORDER_CLAUSES = new Map([
+	['id-asc', 'id ASC'],
+	['id-desc', 'id DESC'],
+	['likes-asc', 'likes ASC, id DESC'],
+	['likes-desc', 'likes DESC, id DESC'],
+]);
+
 /**
- * だじゃれ一覧を新しい順に返す。
+ * だじゃれ一覧を返す。
+ * `?order=` で並び順を指定する（id-asc / id-desc / likes-asc / likes-desc）。省略時は id-desc。
  */
 app.get('/', async (c) => {
-	const { results } = await c.env.DB.prepare('SELECT id, text, summary, url, likes FROM gyagus ORDER BY id DESC').all<GyaguRow>();
+	const order = c.req.query('order') || 'id-desc';
+	const orderBy = ORDER_CLAUSES.get(order);
+	if (orderBy == null) {
+		return c.json({ error: `order must be one of ${[...ORDER_CLAUSES.keys()].join(', ')}` }, 400);
+	}
+
+	const { results } = await c.env.DB.prepare(`SELECT id, text, summary, url, likes FROM gyagus ORDER BY ${orderBy}`).all<GyaguRow>();
 	return c.json(results.map((g) => ({
 		id: g.id,
 		text: g.text,
