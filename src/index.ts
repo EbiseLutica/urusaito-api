@@ -58,6 +58,44 @@ app.get('/', async (c) => {
 	})));
 });
 
+const SITE_URL = 'https://lutic.at/gyagu';
+
+const escapeXml = (s: string) => s
+	.replace(/&/g, '&amp;')
+	.replace(/</g, '&lt;')
+	.replace(/>/g, '&gt;')
+	.replace(/"/g, '&quot;')
+	.replace(/'/g, '&apos;');
+
+/**
+ * ギャグ一覧の RSS 2.0 フィード。新しい順。
+ * ギャグに日付は無いので pubDate は付けず、guid に ID を使う。
+ */
+app.get('/rss.xml', async (c) => {
+	const { results } = await c.env.DB.prepare('SELECT id, text, summary, url FROM gyagus ORDER BY id DESC').all<Omit<GyaguRow, 'likes'>>();
+	const items = results.map((g) => {
+		// summary は前フリなので、あるときはタイトルに前フリ、本文にオチを入れる
+		const title = g.summary || g.text;
+		const lines = [`<title>${escapeXml(title)}</title>`];
+		lines.push(`<link>${SITE_URL}#gag-${g.id}</link>`);
+		lines.push(`<guid isPermaLink="false">urusaito-${g.id}</guid>`);
+		lines.push(`<description>${escapeXml(g.summary ? g.text : (g.url ?? ''))}</description>`);
+		if (g.url) lines.push(`<source url="${escapeXml(g.url)}">出典</source>`);
+		return `<item>${lines.join('')}</item>`;
+	});
+
+	const xml = `<?xml version="1.0" encoding="UTF-8"?>`
+		+ `<rss version="2.0"><channel>`
+		+ `<title>ギャグ | るちーかのサイト</title>`
+		+ `<link>${SITE_URL}</link>`
+		+ `<description>このサイト、うるさいとｗｗｗ</description>`
+		+ `<language>ja</language>`
+		+ items.join('')
+		+ `</channel></rss>`;
+
+	return c.body(xml, 200, { 'Content-Type': 'application/rss+xml; charset=utf-8' });
+});
+
 /**
  * だじゃれを新規追加する。
  * ペイロード: `{ text: string; summary?: string | null; url: string }`。
